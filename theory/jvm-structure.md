@@ -38,6 +38,12 @@ The operand stack is empty when the frame that contains it is created. The Java 
 
 For example, the *iadd* instruction adds two `int` values together. It requires that the `int` values to be added be the top two values of the operand stack, pushed there by previous instructions. Both of the `int` values are popped from the operand stack. They are added, and their sum is pushed back onto the operand stack. Subcomputations may be nested on the operand stack, resulting in values that can be used by the encompassing computation.
 
+Each entry on the operand stack can hold a value of any Java Virtual Machine type, including a value of type `long` or type `double`.
+
+Values from the operand stack must be operated upon in ways appropriate to their types. It is not possible, for example, to push two `int` values and subsequently treat them as a `long` or to push two `float` values and subsequently add them with an *iadd* instruction. A small number of Java Virtual Machine instructions (the *dup* instructions ([§*dup*](https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-6.html#jvms-6.5.dup "dup")) and *swap* ([§*swap*](https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-6.html#jvms-6.5.swap "swap"))) operate on run-time data areas as raw values without regard to their specific types; these instructions are defined in such a way that they cannot be used to modify or break up individual values. These restrictions on operand stack manipulation are enforced through `class` file verification ([§4.10](https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-4.html#jvms-4.10 "4.10. Verification of class Files")).
+
+At any point in time, an operand stack has an associated depth, where a value of type `long` or `double` contributes two units to the depth and a value of any other type contributes one unit.
+
 ## Types and the Java Virtual Machine
 
 Most of the instructions in the Java Virtual Machine instruction set encode type information about the operations they perform. For instance, the *iload* instruction loads the contents of a local variable, which must be an `int`, onto the operand stack. The *fload* instruction does the same with a `float` value. The two instructions may have identical implementations, but have distinct opcodes.
@@ -103,3 +109,56 @@ do {
     execute the action for the opcode;
 } while (there is more to do);
 ```
+
+# Types and The JVM
+
+Most of the instructions in the Java Virtual Machine instruction set encode type information about the operations they perform. For instance, the *iload* instruction ([§*iload*](https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-6.html#jvms-6.5.iload "iload")) loads the contents of a local variable, which must be an `int`, onto the operand stack. The *fload* instruction ([§*fload*](https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-6.html#jvms-6.5.fload "fload")) does the same with a `float` value. The two instructions may have identical implementations, but have distinct opcodes.
+
+# Instructions
+
+## Store And Load
+
+* Load a local variable onto the operand stack: *iload*, *iload\_<n>*, *lload*, *lload\_<n>*, *fload*, *fload\_<n>*, *dload*, *dload\_<n>*, *aload*, *aload\_<n>*.
+* Store a value from the operand stack into a local variable: *istore*, *istore\_<n>*, *lstore*, *lstore\_<n>*, *fstore*, *fstore\_<n>*, *dstore*, *dstore\_<n>*, *astore*, *astore\_<n>*.
+* Load a constant on to the operand stack: *bipush*, *sipush*, *ldc*, *ldc\_w*, *ldc2\_w*, *aconst\_null*, *iconst\_m1*, *iconst\_<i>*, *lconst\_<l>*, *fconst\_<f>*, *dconst\_<d>*.
+
+Instructions that access fields of objects and elements of arrays ([§2.11.5](https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-2.html#jvms-2.11.5 "2.11.5. Object Creation and Manipulation")) also transfer data to and from the operand stack.
+
+## Arithmetic instr
+
+The arithmetic instructions compute a result that is typically a function of two values on the operand stack, pushing the result back on the operand stack. There are two main kinds of arithmetic instructions: those operating on integer values and those operating on floating-point values. Within each of these kinds, the arithmetic instructions are specialized to Java Virtual Machine numeric types.
+
+## Object Creation And Manipulation
+
+Although both class instances and arrays are objects, the Java Virtual Machine creates and manipulates class instances and arrays using distinct sets of instructions:
+
+* Create a new class instance: *new*.
+* Create a new array: *newarray*, *anewarray*, *multianewarray*.
+* Access fields of classes (`static` fields, known as class variables) and fields of class instances (non-`static` fields, known as instance variables): *getstatic*, *putstatic*, *getfield*, *putfield*.
+* Load an array component onto the operand stack: *baload*, *caload*, *saload*, *iaload*, *laload*, *faload*, *daload*, *aaload*.
+* Store a value from the operand stack as an array component: *bastore*, *castore*, *sastore*, *iastore*, *lastore*, *fastore*, *dastore*, *aastore*.
+* Get the length of array: *arraylength*.
+* Check properties of class instances or arrays: *instanceof*, *checkcast*.
+
+## Stack ops
+
+A number of instructions are provided for the direct manipulation of the operand stack: *pop*, *pop2*, *dup*, *dup2*, *dup\_x1*, *dup2\_x1*, *dup\_x2*, *dup2\_x2*, *swap*.
+
+## Branches
+
+* Conditional branch: *ifeq*, *ifne*, *iflt*, *ifle*, *ifgt*, *ifge*, *ifnull*, *ifnonnull*, *if\_icmpeq*, *if\_icmpne*, *if\_icmplt*, *if\_icmple*, *if\_icmpgt* *if\_icmpge*, *if\_acmpeq*, *if\_acmpne*.
+* Compound conditional branch: *tableswitch*, *lookupswitch*.
+* Unconditional branch: *goto*, *goto\_w*, *jsr*, *jsr\_w*, *ret*.
+
+## Invocation and Return Instruction
+
+The following five instructions invoke methods:
+
+* *invokevirtual* invokes an instance method of an object, dispatching on the (virtual) type of the object. This is the normal method dispatch in the Java programming language.
+* *invokeinterface* invokes an interface method, searching the methods implemented by the particular run-time object to find the appropriate method.
+* *invokespecial* invokes an instance method requiring special handling, either an instance initialization method ([§2.9.1](https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-2.html#jvms-2.9.1 "2.9.1. Instance Initialization Methods")) or a method of the current class or its supertypes.
+* *invokestatic* invokes a class (`static`) method in a named class.
+
+## Throw Exception
+
+An exception is thrown programmatically using the *athrow* instruction. Exceptions can also be thrown by various Java Virtual Machine instructions if they detect an abnormal condition.
